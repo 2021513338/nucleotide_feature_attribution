@@ -68,7 +68,7 @@ def compute_integrated_hessians(model, steps, input_emb, baseline_emb, pad_mask,
 
     # 5. 计算二阶导 (Hessian 交互项)
     # 差值项：(Input - Baseline)
-    diff_5 = (b_in5 - b_base5).sum(dim=2)
+    diff_5 = b_in5 - b_base5
 
     for i in range(seq_len_5):
         # 对位置 i 的一阶导再次求导，目标是 interp_beta_5
@@ -81,11 +81,9 @@ def compute_integrated_hessians(model, steps, input_emb, baseline_emb, pad_mask,
 
         if hessian_row_i is not None:
             # 聚合 Embedding 维度得到 (curr_bs, seq_len_5)
-            hessian_row_i = hessian_row_i.sum(dim=2)
-
             # 计算该位置的交互贡献：H_ij * (x_i - b_i) * (x_j - b_j)
             # 注意：这里我们计算的是 Hessian 乘以 delta，符合归因定义
-            contrib = hessian_row_i * diff_5[:, i:i + 1]
+            contrib = (hessian_row_i * diff_5).sum(dim=2)
 
             # 将插值批次的结果重塑并累加
             contrib = contrib.view(batch_size_input, curr_bs, seq_len_5).mean(dim=1)
